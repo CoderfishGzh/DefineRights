@@ -1,102 +1,208 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-/// Edit this file to define custom logic or remove it if it is not needed.
-/// Learn more about FRAME and the core library of Substrate FRAME pallets:
-/// <https://docs.substrate.io/v3/runtime/frame>
-pub use pallet::*;
+  pub use pallet::*;
+  use frame_support::{dispatch::DispatchResult,
+    pallet_prelude::*, traits::Currency};
+use frame_support::sp_runtime::traits::Convert;
+use frame_system::pallet_prelude::*;
+use sp_std::convert::TryInto;
+use sp_std::vec::Vec;
+use sp_runtime::traits::Zero;
+use sp_runtime::traits::AtLeast32BitUnsigned;
 
-#[cfg(test)]
-mod mock;
+#[cfg(feature = "std")]
+use serde::{Deserialize, Serialize};
 
-#[cfg(test)]
-mod tests;
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, scale_info::TypeInfo)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+pub struct AuthInfo<BlockNumber, AccountId> 
+    where BlockNumber: Parameter + AtLeast32BitUnsigned{
+    pub hash : Vec<u8>, //作品id
+    pub accountld : AccountId,
+    pub blocknumber : BlockNumber,
+    pub description: Vec<u8>,
+    pub orgcode : Vec<u8>, //公司id
+}
 
-#[cfg(feature = "runtime-benchmarks")]
-mod benchmarking;
+impl<BlockNumber, AccountId> AuthInfo<BlockNumber, AccountId> 
+    where BlockNumber: Parameter + AtLeast32BitUnsigned{
+    pub fn new( hash: Vec<u8>,
+                accountld: AccountId,
+                blocknumber: BlockNumber,
+                description: Vec<u8>,
+                orgcode: Vec<u8>) -> Self {
+        Self{
+            hash,
+            accountld,
+            blocknumber,
+            description,
+            orgcode,
+        }
+    }
+}
 
-#[frame_support::pallet]
-pub mod pallet {
-	use frame_support::pallet_prelude::*;
-	use frame_system::pallet_prelude::*;
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, scale_info::TypeInfo)]
+pub struct OrgInfo {
+    pub code : Vec<u8>,
+    pub name : Vec<u8>,
+    pub status: bool,
+}
 
-	/// Configure the pallet by specifying the parameters and types on which it depends.
-	#[pallet::config]
-	pub trait Config: frame_system::Config {
-		/// Because this pallet emits events, it depends on the runtime's definition of an event.
-		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
-	}
+impl OrgInfo {
+    pub fn new( code: Vec<u8>,
+                name: Vec<u8>,
+                status: bool) -> Self {
+        Self {
+            code,
+            name,
+            status,
+        }
+    }
+}
 
-	#[pallet::pallet]
-	#[pallet::generate_store(pub(super) trait Store)]
-	pub struct Pallet<T>(_);
+  #[frame_support::pallet]
+  pub mod pallet {
+    use super::*;
+    use frame_support::{dispatch::DispatchResult, pallet_prelude::*};
+	use frame_system::{pallet_prelude::*, Account};
 
-	// The pallet's runtime storage items.
-	// https://docs.substrate.io/v3/runtime/storage
-	#[pallet::storage]
-	#[pallet::getter(fn something)]
-	// Learn more about declaring storage items:
-	// https://docs.substrate.io/v3/runtime/storage#declaring-storage-items
-	pub type Something<T> = StorageValue<_, u32>;
+     /* Placeholder for defining custom types. */
 
-	// Pallets use events to inform users when important changes are made.
-	// https://docs.substrate.io/v3/runtime/events-and-errors
-	#[pallet::event]
-	#[pallet::generate_deposit(pub(super) fn deposit_event)]
-	pub enum Event<T: Config> {
-		/// Event documentation should end with an array that provides descriptive names for event
-		/// parameters. [something, who]
-		SomethingStored(u32, T::AccountId),
-	}
+      // TODO: Update the `config` block below
+    #[pallet::config]
+    pub trait Config: frame_system::Config {
+        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+    }
 
-	// Errors inform users that something went wrong.
-	#[pallet::error]
-	pub enum Error<T> {
-		/// Error names should be descriptive.
-		NoneValue,
-		/// Errors should have helpful documentation associated with them.
-		StorageOverflow,
-	}
+      // The struct on which we build all of our Pallet logic.
+    #[pallet::pallet]
+    #[pallet::generate_store(pub(super) trait Store)]
+    #[pallet::without_storage_info]
+    pub struct Pallet<T>(_);
+	
+    //AuthRight information, to quickiy locate AuthRight
+    #[pallet::storage]
+    #[pallet::getter(fn authright)]
+    pub(super) type AuthRight<T: Config> = StorageMap<
+        _,
+        Blake2_128Concat,
+        Vec<u8>,
+        Vec<u8>,
+        OptionQuery,
+    >;
 
-	// Dispatchable functions allows users to interact with the pallet and invoke state changes.
-	// These functions materialize as "extrinsics", which are often compared to transactions.
-	// Dispatchable functions must be annotated with a weight and must return a DispatchResult.
-	#[pallet::call]
-	impl<T: Config> Pallet<T> {
-		/// An example dispatchable that takes a singles value as a parameter, writes the value to
-		/// storage and emits an event. This function must be dispatched by a signed extrinsic.
-		#[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
-		pub fn do_something(origin: OriginFor<T>, something: u32) -> DispatchResult {
-			// Check that the extrinsic was signed and get the signer.
-			// This function will return an error if the extrinsic is not signed.
-			// https://docs.substrate.io/v3/runtime/origins
-			let who = ensure_signed(origin)?;
+    //Details of the copyright
+    #[pallet::storage]
+	#[pallet::getter(fn authdetail)]
+	pub type AuthDetail<T : Config> = StorageMap<
+        _, 
+        Blake2_128Concat, 
+        Vec<u8>, 
+        AuthInfo<T::BlockNumber, T::AccountId>,
+        OptionQuery,
+    >;
 
-			// Update storage.
-			<Something<T>>::put(something);
+    //The information of organization
+    #[pallet::storage]
+	#[pallet::getter(fn org)]
+	pub type Org<T : Config> = StorageMap<
+        _, 
+        Blake2_128Concat, 
+        Vec<u8>, 
+        OrgInfo,
+        OptionQuery,
+    >;
+     
+      // TODO: Update the `event` block below
+      #[pallet::event]
+      #[pallet::generate_deposit(pub(super) fn deposit_event)]
+      pub enum Event<T: Config> {
+        // (accountid, hash, orgcode)
+        AuthRightSuccessed(T::AccountId, Vec<u8>, Vec<u8>),
+        // (orgCode, orgName) )
+        OrgRegSuccess(T::AccountId, Vec<u8>, Vec<u8>),
+        // orgApprove(orgCode, status)
+        OrgApproveSuccess(T::AccountId, Vec<u8>, bool),
+      }
 
-			// Emit an event.
-			Self::deposit_event(Event::SomethingStored(something, who));
-			// Return a successful DispatchResultWithPostInfo
-			Ok(())
-		}
+      // TODO: Update the `error` block below
+      #[pallet::error]
+        pub enum Error<T> {
+            NoSuchOrg,
 
-		/// An example dispatchable that may throw a custom error.
-		#[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,1))]
-		pub fn cause_error(origin: OriginFor<T>) -> DispatchResult {
-			let _who = ensure_signed(origin)?;
+            OrgAlreadyExist,
 
-			// Read a value from storage.
-			match <Something<T>>::get() {
-				// Return an error if the value has not been set.
-				None => Err(Error::<T>::NoneValue)?,
-				Some(old) => {
-					// Increment the value read from storage; will error in the event of overflow.
-					let new = old.checked_add(1).ok_or(Error::<T>::StorageOverflow)?;
-					// Update the value in storage with the incremented result.
-					<Something<T>>::put(new);
-					Ok(())
-				},
-			}
-		}
-	}
+            StatusNotAllow,
+
+            HashAlreadyExist,
+        }
+
+      // TODO: add #[pallet::storage] block
+
+      // TODO: Update the `call` block below
+      #[pallet::call]
+      impl<T: Config> Pallet<T> {
+        /*
+        orgReg(orgCode, orgName) 
+        //作用：把公司注册到链上
+        1.查询该公司的 code是否已经在链上存储了
+            如果已经存储了，直接return Ok(())
+        2.查询为空
+            2.1创建新的orginfo结构体
+            2.2 Code = orgCode, Name = orgName, Status = false
+            2.3 将该结构体插入
+            2.4 发送注册成功事件， return Ok(())
+        */
+        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+        pub fn orgReg(
+            origin: OriginFor<T>,
+            orgcode: Vec<u8>,
+            orgname: Vec<u8>,
+        ) -> DispatchResult {
+            
+            let who = ensure_signed(origin)?;
+            //This orgnation is already exist
+            ensure!(!Org::<T>::contains_key(orgcode.clone()), Error::<T>::OrgAlreadyExist);
+
+            let new_org_info = OrgInfo::new(
+                orgcode.clone(),
+                orgname.clone(),
+                false,
+            );
+            
+            Org::<T>::insert(orgcode.clone(), new_org_info);
+            Self::deposit_event(Event::OrgRegSuccess(who, orgcode.clone(), orgname.clone()));
+
+            Ok(())
+        }
+
+        /*
+        orgApprove(orgCode, status)
+        //作用：管理员将公司状态 切换为 true
+        1. 查询 orgCode是否在链上
+            查询失败，发送失败的event return Ok(())
+        2. 查询成功
+            2.1 取出查询的公司的结构体，将该公司的status设置为 status
+            2.2 发送 orgApprove事件，return Ok(()) */
+        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+        pub fn orgApprove(
+            origin: OriginFor<T>,
+            orgcode: Vec<u8>,
+            status : bool,
+        ) -> DispatchResult {
+            
+            ensure_root(origin.clone())?;
+            let who = ensure_signed(origin)?;
+            //This organzation not exist
+            ensure!(Org::<T>::contains_key(orgcode.clone()), Error::<T>::NoSuchOrg);
+            
+            let mut orginfo = Org::<T>::get(orgcode.clone()).unwrap();
+            orginfo.status = status;
+
+            Org::<T>::insert(orgcode.clone(), orginfo);
+            Self::deposit_event(Event::OrgApproveSuccess(who.clone(), orgcode.clone(), status));
+
+            Ok(())
+        }
+    }
 }

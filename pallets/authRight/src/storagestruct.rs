@@ -1,6 +1,5 @@
-#[cfg(feature = "std")]
-
 use codec::{Decode, Encode};
+use sp_std::vec::Vec;
 use frame_support::{Parameter, RuntimeDebug, BoundedVec};
 use sp_runtime::traits::AtLeast32BitUnsigned;
 
@@ -15,6 +14,7 @@ pub struct AuthInfo<BlockNumber, AccountId>
     pub accountld : AccountId,
     pub blocknumber : BlockNumber,
     pub description: BoundedVec<u8, frame_support::traits::ConstU32<64>>,
+    // pub description: Vec<u8>,
     pub orgcode : Vec<u8>, 
 }
 
@@ -24,6 +24,7 @@ impl<BlockNumber, AccountId> AuthInfo<BlockNumber, AccountId>
                 accountld: AccountId,
                 blocknumber: BlockNumber,
                 description: BoundedVec<u8, frame_support::traits::ConstU32<64>>,
+                //description: Vec<u8>,
                 orgcode: Vec<u8>) -> Self {
         Self{
             hash,

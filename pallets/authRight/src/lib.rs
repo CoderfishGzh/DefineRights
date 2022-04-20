@@ -9,7 +9,6 @@ use frame_support::sp_runtime::traits::Convert;
 use frame_system::pallet_prelude::*;
 use sp_std::vec::Vec;
 
-
 type BalanceOf<T> = <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
   #[frame_support::pallet]
@@ -49,7 +48,7 @@ type BalanceOf<T> = <<T as Config>::Currency as Currency<<T as frame_system::Con
         _, 
         Blake2_128Concat, 
         Vec<u8>, 
-        AuthInfo<T::BlockNumber,T::AccountId> ,
+        AuthInfo<T::BlockNumber,T::AccountId>,
         OptionQuery,
     >;
 
@@ -145,6 +144,7 @@ type BalanceOf<T> = <<T as Config>::Currency as Currency<<T as frame_system::Con
             origin: OriginFor<T>,
             hash: Vec<u8>,
             description: BoundedVec<u8, frame_support::traits::ConstU32<64>>,
+            //description: Vec<u8>,
             org_code : Vec<u8>,
         ) -> DispatchResult {
             

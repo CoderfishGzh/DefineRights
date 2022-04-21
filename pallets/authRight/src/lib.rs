@@ -71,7 +71,7 @@ type BalanceOf<T> = <<T as Config>::Currency as Currency<<T as frame_system::Con
         // (orgCode, orgName) )
         OrgRegSuccess(T::AccountId, Vec<u8>, Vec<u8>),
         // orgApprove(orgCode, status)
-        OrgApproveSuccess(T::AccountId, Vec<u8>, u8),
+        OrgApproveSuccess(Vec<u8>, u8),
       }
 
       #[pallet::error]
@@ -98,7 +98,7 @@ type BalanceOf<T> = <<T as Config>::Currency as Currency<<T as frame_system::Con
             let who = ensure_signed(origin)?;
             //This orgnation is already exist
             ensure!(!Org::<T>::contains_key(org_code.clone()), Error::<T>::OrgAlreadyExist);
-
+            
             //crate the new ortInfo struct, and save in Org
             let new_org_info = OrgInfo::new(
                 org_code.clone(),
@@ -121,7 +121,7 @@ type BalanceOf<T> = <<T as Config>::Currency as Currency<<T as frame_system::Con
         ) -> DispatchResult {
             
             ensure_root(origin.clone())?;
-            let who = ensure_signed(origin)?;
+            //let who = ensure_signed(origin)?;
 
             //This organzation not exist
             ensure!(Org::<T>::contains_key(org_code.clone()), Error::<T>::NoSuchOrg);
@@ -133,7 +133,7 @@ type BalanceOf<T> = <<T as Config>::Currency as Currency<<T as frame_system::Con
             //Save the new status of organzation into Org
             Org::<T>::insert(org_code.clone(), org_info);
             
-            Self::deposit_event(Event::OrgApproveSuccess(who.clone(), org_code.clone(), status));
+            Self::deposit_event(Event::OrgApproveSuccess(org_code.clone(), status));
 
             Ok(())
         }

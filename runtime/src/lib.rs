@@ -273,6 +273,47 @@ impl pallet_authRight::Config for Runtime {
 	type BalanceToNumber = sp_runtime::traits::ConvertInto;
 }
 
+impl pallet_utility::Config for Runtime {
+	type Event = Event;
+	type Call = Call;
+	type WeightInfo = pallet_utility::weights::SubstrateWeight<Runtime>;
+	type PalletsOrigin = OriginCaller;
+}
+
+// parameter_types! {
+// 	// NOTE: Currently it is not possible to change the epoch duration after the chain has started.
+// 	//       Attempting to do so will brick block production.
+// 	pub const EpochDuration: u64 = EPOCH_DURATION_IN_SLOTS;
+// 	pub const ExpectedBlockTime: Moment = MILLISECS_PER_BLOCK;
+// 	pub const ReportLongevity: u64 =
+// 		BondingDuration::get() as u64 * SessionsPerEra::get() as u64 * EpochDuration::get();
+// }
+
+// impl pallet_babe::Config for Runtime {
+// 	type EpochDuration = EpochDuration;
+// 	type ExpectedBlockTime = ExpectedBlockTime;
+// 	type EpochChangeTrigger = pallet_babe::ExternalTrigger;
+// 	type DisabledValidators = Session;
+
+// 	type KeyOwnerProofSystem = Historical;
+
+// 	type KeyOwnerProof = <Self::KeyOwnerProofSystem as KeyOwnerProofSystem<(
+// 		KeyTypeId,
+// 		pallet_babe::AuthorityId,
+// 	)>>::Proof;
+
+// 	type KeyOwnerIdentification = <Self::KeyOwnerProofSystem as KeyOwnerProofSystem<(
+// 		KeyTypeId,
+// 		pallet_babe::AuthorityId,
+// 	)>>::IdentificationTuple;
+
+// 	type HandleEquivocation =
+// 		pallet_babe::EquivocationHandler<Self::KeyOwnerIdentification, Offences, ReportLongevity>;
+
+// 	type WeightInfo = ();
+// 	type MaxAuthorities = MaxAuthorities;
+// }
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub enum Runtime where
@@ -291,6 +332,9 @@ construct_runtime!(
 		// Include the custom logic from the pallet-template in the runtime.
 		//TemplateModule: pallet_template,
 		AuthRight: pallet_authRight,
+		Utility: pallet_utility,
+		// Babe: pallet_babe,
+		
 	}
 );
 
@@ -333,7 +377,8 @@ mod benches {
 		[frame_system, SystemBench::<Runtime>]
 		[pallet_balances, Balances]
 		[pallet_timestamp, Timestamp]
-		[pallet_template, TemplateModule]
+		[pallet_authRight, AuthRight]
+		
 	);
 }
 
